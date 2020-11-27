@@ -13,6 +13,12 @@ if [ $EUID -ne 0 ]; then
 	exit 1
 fi
 
+echo -n "User password: "
+read USERPASSWORD
+
+echo -n "User SSH key: (enter to skip)"
+read USERKEY
+
 source manifest
 
 EFI_PART=1
@@ -57,32 +63,6 @@ systemctl enable openssh
 # root passwd prompt
 passwd --lock root
 
-# boot
-bootctl install
-cp /root/arch.conf /boot/loader/entries/arch.conf
-bootctl update
-
-# wired network
-cp /root/en.network /etc/systemd/network/en.network
-systemctl enable systemd-networkd
-systemctl enable resolvd
-
-# create user
-if [ -n "${ENABLE_AUT0LOGIN}" ]; then
-  groupadd -r autologin
-  useradd -m ${USERNAME} -G autologin,wheel
-else
-  useradd -m ${USERNAME} -G wheel
-fi
-
-echo "${USERNAME}:${USERNAME}" | chpasswd
-echo "
-root ALL=(ALL) ALL
-${USERNAME} ALL=(ALL) ALL
-
-#includedir /etc/sudoers.d
-" > /etc/sudoers
-
 # hostname
 hostnamectl set-hostname ${MY_HOSTNAME}
 sed -i "/^hosts:/ s/resolve/mdns resolve/" /etc/nsswitch.conf
@@ -99,4 +79,34 @@ locale-gen
 timedatectl set-timezone ${TZONE}
 loadkeys ${KEY_LAYOUT}
 timedatectl set-ntp true
+
+# boot
+bootctl install
+cp /root/arch.conf /boot/loader/entries/arch.conf
+UUID=$(blkid | tr -s ' ' | grep 'TYPE="ext4"' | cut -f2 -d'"')
+sed -e "s/\[UUID\]/\"${UUID}\"/g" /boot/loader/entries/arch.conf
+bootctl update
+
+# wired network
+#cp /root/en.network /etc/systemd/network/en.network
+systemctl enable systemd-networkd
+systemctl enable systemd-resolvd
+
+# create user
+if [ -n "${ENABLE_AUT0LOGIN}" = true ]; then
+  groupadd -r autologin
+  useradd -m ${USERNAME} -G autologin,wheel
+else
+  useradd -m ${USERNAME} -G wheel
+fi
+
+echo "${USERNAME}:${USERPASSWORD}" | chpasswd
+
+echo "
+root ALL=(ALL) ALL
+wheel ALL=(ALL) ALL
+${USERNAME} ALL=(ALL) ALL
+
+#includedir /etc/sudoers.d
+" > /etc/sudoers
 EOF
