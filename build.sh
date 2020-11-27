@@ -38,7 +38,6 @@ setfont ter-v32n
 loadkeys ${KEY_LAYOUT}
 
 # datetime
-#timedatectl set-timezone ${TZONE}
 #timedatectl set-ntp true
 
 # prep disk
@@ -53,13 +52,18 @@ if [ ! -z "${SYSTEM_DISK}" ]; then
   mount ${SYSTEM_DISK}${ROOT_PART} ${CHROOT_PATH}
   mkdir ${CHROOT_PATH}/boot
   mount ${SYSTEM_DISK}${EFI_PART} ${CHROOT_PATH}/boot
-  genfstab -U ${CHROOT_PATH} >> /mnt/etc/fstab
+  genfstab -U ${CHROOT_PATH} >> ${CHROOT_PATH}/etc/fstab
 else
   BUILD_IMG=${SYSTEM_NAME}-build.img
 
   fallocate -l ${SYSTEM_SIZE} ${BUILD_IMG}
   mkfs.ext4 ${BUILD_IMG}
   mount ${BUILD_IMG} ${CHROOT_PATH}
+  mkdir ${CHROOT_PATH}/etc
+  echo "
+LABEL=root /         ext4   defaults,discard 0 1
+LABEL=efi  /boot      vfat  rw,noatime,nofail  0 0
+  " > ${CHROOT_PATH}/etc/fstab
 fi
 
 # pacman prep disk
@@ -73,7 +77,28 @@ arch-chroot ${CHROOT_PATH} /bin/bash <<EOF
 set -e
 set -x
 
-pacman -Sy --noconfirm networkmanager vim nano htop openssh
+# essentials
+# -Syy glibc for reinstalling language packs
+# only required for docker container
+pacman -Syy --noconfirm networkmanager vim nano htop openssh glibc
+
+# locale
+cp /etc/locale.gen /etc/locale.gen.bak
+echo "LANG=${SYSTEM_LOCALE}
+LANG=${USER_LOCALE}
+LC_NUMERIC=${USER_LOCALE}
+LC_TIME=${USER_LOCALE}
+LC_MONETARY=${USER_LOCALE}
+LC_PAPER=${USER_LOCALE}
+LC_MEASUREMENT=${USER_LOCALE}
+" > /etc/locale.conf
+echo "${USER_LOCALE} UTF-8
+${SYSTEM_LOCALE} UTF-8
+" > /etc/locale.gen
+locale-gen
+
+# datetime
+ln -sf /usr/share/zoneinfo/${TZONE} /etc/localtime
 
 # init systemd # /etc/mkinitcpio.conf
 cp /etc/mkinitcpio.conf /etc/mkinitcpio.conf.bak
@@ -91,15 +116,6 @@ passwd --lock root
 # hostname
 echo ${SYSTEM_NAME} > /etc/hostname
 sed -i "/^hosts:/ s/resolve/mdns resolve/" /etc/nsswitch.conf
-
-# locale
-cp /etc/locale.conf /etc/locale.conf.bak
-echo "LANG=${SYSTEM_LOCALE}" > /etc/locale.conf
-echo "
-${USER_LOCALE} UTF-8
-${SYSTEM_LOCALE} UTF-8
-" > /etc/locale.gen
-locale-gen
 
 # keyb
 loadkeys ${KEY_LAYOUT}
@@ -137,12 +153,12 @@ ${USERNAME} ALL=(ALL) ALL
 
 # ssh
 systemctl enable sshd
-
 EOF
 
-if [ ! -z "${SYSTEM_DISK}" ]; then
+if [ -z "${SYSTEM_DISK}" ]; then
+  mkdir -p /output
   ARCHIVE=${BUILD_IMG}.img.tar.xz
-  tar caf ${ARCHIVE} ${BUILD_IMG}.img
+  tar caf ${ARCHIVE} ${BUILD_IMG}
   rm ${BUILD_IMG}
   mv ${ARCHIVE} > /output/
 

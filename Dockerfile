@@ -7,4 +7,8 @@ RUN \
 	pacman --noconfirm -Syu && \
 	pacman --noconfirm -S arch-install-scripts
 
+ADD . /workdir
+
 WORKDIR /workdir
+
+ENTRYPOINT ["bash", "/workdir/build.sh"]

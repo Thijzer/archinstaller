@@ -1,10 +1,12 @@
 
 
 
+# provisions
+docker build -t archinstaller .
+docker run --rm -v $(pwd):/workdir --privileged=true archinstaller:latest
 
 ### testing
-docker build -t archinstaller .
-docker run --rm -v $(pwd):/workdir --privileged=true archinstaller:latest /bin/bash -x build.sh
+docker run --rm -v $(pwd):/workdir -w /workdir --privileged=true archlinux:latest /bin/bash -x /workdir/tests/build_test.sh
 
 ## TODO
 - /etx/fstab for .img
