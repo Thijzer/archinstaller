@@ -5,9 +5,6 @@
 
 # SYSTEM_LOCALE, USER_LOCALE, SYSTEM_NAME, KEY_LAYOUT, TZONE, USERNAME, ENABLE_AUT0LOGIN, SYSTEM_DISK, SYSTEM_SIZE, EFI_PART, ROOT_PART
 
-set -e
-set -x
-
 if [ $EUID -ne 0 ]; then
 	echo "$(basename $0) must be run as root"
 	exit 1
@@ -19,6 +16,10 @@ fi
 #echo -n "User SSH key: (enter to skip)"
 #read USERKEY
 
+#blkid
+#echo -n "Choose system disk: "
+#read SYSTEM_DISK
+
 source manifest
 
 EFI_PART=1
@@ -26,11 +27,19 @@ ROOT_PART=2
 CHROOT_PATH=/mnt
 USERPASSWORD='random'
 USERKEY=''
+ROOT_UUID=$(blkid | tr -s ' ' | grep 'TYPE="ext4"' | cut -f2 -d'"')
+
+set -e
+set -x
 
 # script start
-pacman -Sy --ignore terminus-font
+pacman -Sy --noconfirm terminus-font
 setfont ter-v32n
 loadkeys ${KEY_LAYOUT}
+
+# datetime
+#timedatectl set-timezone ${TZONE}
+#timedatectl set-ntp true
 
 # prep disk
 if [ ! -z "${SYSTEM_DISK}" ]; then
@@ -61,8 +70,10 @@ cp /workdir/boot/loader/entries/arch.conf ${CHROOT_PATH}/root/arch.conf
 
 ## chroot script
 arch-chroot ${CHROOT_PATH} /bin/bash <<EOF
+set -e
+set -x
 
-pacman -S networkmanager vim nano htop openssh
+pacman -Sy --noconfirm networkmanager vim nano htop openssh
 
 # init systemd # /etc/mkinitcpio.conf
 cp /etc/mkinitcpio.conf /etc/mkinitcpio.conf.bak
@@ -78,40 +89,33 @@ mkinitcpio -p linux
 passwd --lock root
 
 # hostname
-hostnamectl set-hostname ${SYSTEM_NAME}
+echo ${SYSTEM_NAME} > /etc/hostname
 sed -i "/^hosts:/ s/resolve/mdns resolve/" /etc/nsswitch.conf
 
 # locale
 cp /etc/locale.conf /etc/locale.conf.bak
-cp /etc/locale.gen /etc/locale.gen.bak
-echo "LANG=${system_locale}" /etc/locale.gen
+echo "LANG=${SYSTEM_LOCALE}" > /etc/locale.conf
 echo "
 ${USER_LOCALE} UTF-8
 ${SYSTEM_LOCALE} UTF-8
-" >> /etc/locale.gen
+" > /etc/locale.gen
 locale-gen
 
 # keyb
 loadkeys ${KEY_LAYOUT}
-localectl --no-convert set-x11-keymap be
-
-# datetime
-timedatectl set-timezone ${TZONE}
-timedatectl set-ntp true
 
 # boot
 if [ ! -z "${SYSTEM_DISK}" ]; then
   bootctl install
   mv /root/arch.conf /boot/loader/entries/arch.conf
-  UUID=$(blkid | tr -s ' ' | grep 'TYPE="ext4"' | cut -f2 -d'"')
-  sed -e "s/\[UUID\]/\"${UUID}\"/g" /boot/loader/entries/arch.conf
+  sed -e "s/\[ROOT_UUID\]/\"${UUID}\"/g" /boot/loader/entries/arch.conf
   bootctl update
 fi
 
 # wired network
 #cp /root/en.network /etc/systemd/network/en.network
-#systemctl enable systemd-networkd
-#systemctl enable systemd-resolvd
+systemctl enable systemd-networkd
+systemctl enable systemd-resolved
 
 # create user
 if [ -n "${ENABLE_AUT0LOGIN}" = true ]; then
@@ -132,6 +136,15 @@ ${USERNAME} ALL=(ALL) ALL
 " > /etc/sudoers
 
 # ssh
-systemctl enable openssh
+systemctl enable sshd
 
 EOF
+
+if [ ! -z "${SYSTEM_DISK}" ]; then
+  ARCHIVE=${BUILD_IMG}.img.tar.xz
+  tar caf ${ARCHIVE} ${BUILD_IMG}.img
+  rm ${BUILD_IMG}
+  mv ${ARCHIVE} > /output/
+
+  sha256sum ${ARCHIVE} > /output/${ARCHIVE}-sha256sum.txt
+fi
