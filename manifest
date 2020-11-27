@@ -5,3 +5,4 @@ KEY_LAYOUT=be-latin1
 TZONE=Europe/Brussels
 USERNAME=thijzer
 ENABLE_AUT0LOGIN=false
+SYSTEM_DISK=/dev/sda
