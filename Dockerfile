@@ -6,5 +6,5 @@ RUN \
 	pacman --noconfirm -Syy && \
 	pacman --noconfirm -Syu && \
 	pacman --noconfirm -S arch-install-scripts
-    
+
 WORKDIR /workdir

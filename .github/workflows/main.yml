@@ -11,10 +11,10 @@ jobs:
       - name: Obtain base docker image
         run: docker pull archlinux:latest
       - name: Create docker build image
-        run: docker build --no-cache -t image-builder:latest .
+        run: docker build --no-cache -t archinstaller .
       - name: Build system image
         id: build_image
-        run: docker run --rm -v $(pwd)/output:/output --privileged=true image-builder:latest $(echo ${GITHUB_SHA} | cut -c1-7)
+        run: docker run --rm -v $(pwd):/workdir --privileged=true archinstaller:latest /bin/bash -x $(pwd)/build.sh
       # - name: Create release
       #   id: create_release
       #   uses: actions/create-release@v1
