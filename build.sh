@@ -156,11 +156,10 @@ systemctl enable sshd
 EOF
 
 if [ -z "${SYSTEM_DISK}" ]; then
-  mkdir -p /output
-  ARCHIVE=${BUILD_IMG}.img.tar.xz
-  tar caf ${ARCHIVE} ${BUILD_IMG}
-  rm ${BUILD_IMG}
-  mv ${ARCHIVE} > /output/
+  mkdir -p /workdir/output
+  ARCHIVE=${BUILD_IMG}.gz
+  gzip --fast ${BUILD_IMG}
+  mv ${ARCHIVE} > /workdir/output/
 
-  sha256sum ${ARCHIVE} > /output/${ARCHIVE}-sha256sum.txt
+  sha256sum ${ARCHIVE} > /workdir/output/${ARCHIVE}-sha256sum.txt
 fi
