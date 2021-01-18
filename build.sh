@@ -61,11 +61,11 @@ else
   mount ${BUILD_IMG} ${CHROOT_PATH}
   mkdir ${CHROOT_PATH}/etc
   echo "
-LABEL=root /         ext4   defaults,discard 0 1
+LABEL=root /         ext4   defaults,discard   0 1
 LABEL=efi  /boot      vfat  rw,noatime,nofail  0 0
-  " > ${CHROOT_PATH}/etc/fstab
+" > ${CHROOT_PATH}/etc/fstab
 fi
-
+ 
 # pacman prep disk
 pacstrap ${CHROOT_PATH} base linux linux-firmware
 
@@ -155,11 +155,13 @@ ${USERNAME} ALL=(ALL) ALL
 systemctl enable sshd
 EOF
 
+# cleanup
+umount ${CHROOT_PATH}
+
 if [ -z "${SYSTEM_DISK}" ]; then
   mkdir -p /workdir/output
   ARCHIVE=${BUILD_IMG}.gz
-  gzip --fast ${BUILD_IMG}
-  mv ${ARCHIVE} > /workdir/output/
-
-  sha256sum ${ARCHIVE} > /workdir/output/${ARCHIVE}-sha256sum.txt
+  gzip --keep --fast ${BUILD_IMG}
+  mv ${ARCHIVE} /workdir/output/${ARCHIVE}
+  sha256sum /workdir/output/${ARCHIVE} > /workdir/output/${ARCHIVE}-sha256sum.txt
 fi

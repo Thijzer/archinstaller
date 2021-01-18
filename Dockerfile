@@ -10,5 +10,3 @@ RUN \
 ADD . /workdir
 
 WORKDIR /workdir
-
-ENTRYPOINT ["bash", "/workdir/build.sh"]

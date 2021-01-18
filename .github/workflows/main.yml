@@ -14,7 +14,7 @@ jobs:
         run: docker build --no-cache -t archinstaller .
       - name: Build system image
         id: build_image
-        run: docker run --rm -v $(pwd)/output:/output --privileged=true archinstaller:latest
+        run: docker run --rm -v $(pwd)/output:/output --privileged=true archinstaller:latest /bin/bash -x build.sh
       # - name: Create release
       #   id: create_release
       #   uses: actions/create-release@v1
