@@ -10,3 +10,6 @@ docker run --rm -v $(pwd):/workdir -w /workdir --privileged=true archlinux:lates
 
 ## TODO
 - /etx/fstab for .img
+- /home/ zfs zpool 
+- /home encrypted
+- snap or/and flatpak options and configuration, default packages
