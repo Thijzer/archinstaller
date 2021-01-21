@@ -15,3 +15,8 @@ docker run --rm -v $(pwd):/workdir -w /workdir --privileged=true archlinux:lates
 - /home/ zfs zpool 
 - /home encrypted
 - snap or/and flatpak options and configuration, default packages
+
+
+## Sources
+kudos to @alkazar for taking the lead
+https://github.com/gamer-os/gamer-os/tree/arch_installer
