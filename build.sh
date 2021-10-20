@@ -69,90 +69,19 @@ fi
 # pacman prep disk
 pacstrap ${CHROOT_PATH} base linux linux-firmware
 
-# copy over files
-cp /workdir/boot/loader/entries/arch.conf ${CHROOT_PATH}/root/arch.conf
+## copy over files
+cp /workdir/skel/boot/loader/entries/arch.conf ${CHROOT_PATH}/root/arch.conf
+cp /workdir/skel/root/en.network ${CHROOT_PATH}/root/en.network 
 
 ## chroot script
 arch-chroot ${CHROOT_PATH} /bin/bash <<EOF
-set -e
-set -x
+set -ex
 
-# essentials
-# -Syy glibc for reinstalling language packs
-# only required for docker container
-pacman -Syy --noconfirm networkmanager vim nano htop openssh glibc
+## essentials
+# -Syy glibc for reinstalling language packs, only required for docker container
+pacman -Syy --noconfirm vim nano htop rsync curl openssh
 
-# locale
-cp /etc/locale.gen /etc/locale.gen.bak
-echo "LANG=${SYSTEM_LOCALE}
-LANG=${USER_LOCALE}
-LC_NUMERIC=${USER_LOCALE}
-LC_TIME=${USER_LOCALE}
-LC_MONETARY=${USER_LOCALE}
-LC_PAPER=${USER_LOCALE}
-LC_MEASUREMENT=${USER_LOCALE}
-" > /etc/locale.conf
-echo "${USER_LOCALE} UTF-8
-${SYSTEM_LOCALE} UTF-8
-" > /etc/locale.gen
-locale-gen
-
-# datetime
-ln -sf /usr/share/zoneinfo/${TZONE} /etc/localtime
-
-# init systemd # /etc/mkinitcpio.conf
-cp /etc/mkinitcpio.conf /etc/mkinitcpio.conf.bak
-echo "
-MODULES=()
-BINARIES=()
-FILES=()
-HOOKS=(base systemd udev autodetect modconf block filesystems keyboard fsck)
-" > /etc/mkinitcpio.conf
-mkinitcpio -p linux
-
-# root passwd prompt
-passwd --lock root
-
-# hostname
-echo ${SYSTEM_NAME} > /etc/hostname
-sed -i "/^hosts:/ s/resolve/mdns resolve/" /etc/nsswitch.conf
-
-# keyb
-loadkeys ${KEY_LAYOUT}
-
-# boot
-if [ ! -z "${SYSTEM_DISK}" ]; then
-  bootctl install
-  mv /root/arch.conf /boot/loader/entries/arch.conf
-  sed -e "s/\[ROOT_UUID\]/\"${UUID}\"/g" /boot/loader/entries/arch.conf
-  bootctl update
-fi
-
-# wired network
-#cp /root/en.network /etc/systemd/network/en.network
-systemctl enable systemd-networkd
-systemctl enable systemd-resolved
-
-# create user
-if [ -n "${ENABLE_AUT0LOGIN}" = true ]; then
-  groupadd -r autologin
-  useradd -m ${USERNAME} -G autologin,wheel
-else
-  useradd -m ${USERNAME} -G wheel
-fi
-
-echo "${USERNAME}:${USERPASSWORD}" | chpasswd
-
-echo "
-root ALL=(ALL) ALL
-wheel ALL=(ALL) ALL
-${USERNAME} ALL=(ALL) ALL
-
-#includedir /etc/sudoers.d
-" > /etc/sudoers
-
-# ssh
-systemctl enable sshd
+source <(curl -sL https://raw.githubusercontent.com/Thijzer/archinstaller/main/arch-choot-installer.sh)
 EOF
 
 # cleanup
