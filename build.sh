@@ -52,6 +52,7 @@ if [ ! -z "${SYSTEM_DISK}" ]; then
   mount ${SYSTEM_DISK}${ROOT_PART} ${CHROOT_PATH}
   mkdir ${CHROOT_PATH}/boot
   mount ${SYSTEM_DISK}${EFI_PART} ${CHROOT_PATH}/boot
+  mkdir ${CHROOT_PATH}/etc
   genfstab -U ${CHROOT_PATH} > ${CHROOT_PATH}/etc/fstab
 else
   BUILD_IMG=${SYSTEM_NAME}-build.img
