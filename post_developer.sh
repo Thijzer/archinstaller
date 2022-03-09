@@ -13,6 +13,6 @@ for PKG in "${PKGS[@]}"; do
     sudo pacman -S "$PKG" --noconfirm --needed
 done
 
-snap install code phpstorm postman blender teams
+snap install code phpstorm --classic
 flatpak install typora
 flatpak install flathub com.github.alainm23.planner
